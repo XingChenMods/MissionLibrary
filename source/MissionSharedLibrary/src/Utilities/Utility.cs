@@ -272,13 +272,14 @@ namespace MissionSharedLibrary.Utilities
             {
                 Mission.Current.SetFastForwardingFromUI(false);
             }
+
             var formation = agent.Formation;
             agent.Formation = null;
             agent.Controller = Agent.ControllerType.Player;
+
             // Note that the formation may be already set by SwitchFreeCameraLogic
             if (agent.Formation == null)
             {
-                SetAgentFormation(agent, formation);
                 SetHasPlayer(formation, false);
             }
 
@@ -330,7 +331,7 @@ namespace MissionSharedLibrary.Utilities
                         mission.MainAgent.RemoveComponent(mission.MainAgent.HumanAIComponent);
                     }
 
-                    mission.MainAgent.Formation = null;
+                    mission.MainAgent.Formation = mission.MainAgent.Team.GetFormation(mission.MainAgent.Character.GetFormationClass());
                     mission.MainAgent.Controller = Agent.ControllerType.AI;
                     // Note that the formation may be already set by SwitchFreeCameraLogic
                     if (mission.MainAgent.Formation == null)
@@ -341,6 +342,7 @@ namespace MissionSharedLibrary.Utilities
                     // the Initialize method need to be called manually.
                     mission.MainAgent.CommonAIComponent?.Initialize();
 
+                    mission.MainAgent.SetShouldCatchUpWithFormation(true);
                     // TODO: seems useless.
                     mission.MainAgent.ResetEnemyCaches();
                     mission.MainAgent.InvalidateTargetAgent();
