@@ -1,5 +1,5 @@
 <Project>
   <PropertyGroup>
-	  <GamePath>C:\Games\Steam\steamapps\common\Mount &amp; Blade II Bannerlord\</GamePath>
+	  <GamePath>$(BANNERLORD_GAME_DIR)\</GamePath>
   </PropertyGroup>
 </Project>

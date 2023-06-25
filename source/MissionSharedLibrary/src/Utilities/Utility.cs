@@ -274,7 +274,9 @@ namespace MissionSharedLibrary.Utilities
             }
 
             var formation = agent.Formation;
-            agent.Formation = null;
+            // Note: this code makes formation info miss everytime the player changes a character to control.
+            //       Not so sure what consequence it will bring by removing it.
+            //agent.Formation = null; 
             agent.Controller = Agent.ControllerType.Player;
 
             // Note that the formation may be already set by SwitchFreeCameraLogic
