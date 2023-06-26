@@ -93,6 +93,8 @@ namespace MissionSharedLibrary.Utilities
         {
             var keyName = GeneralGameKeyCategories.GetKey(GeneralGameKey.OpenMenu).ToSequenceString();
             var hint = Module.CurrentModule.GlobalTextManager.FindText("str_rts_camera_open_menu_hint").SetTextVariable("KeyName", keyName).ToString();
+            var versionInfo = Module.CurrentModule.GlobalTextManager.FindText("str_xingchenmods_fork_version").ToString();
+            DisplayMessageImpl(versionInfo, new Color(222f / 255f, 171f / 255f, 23f / 255f));
             DisplayMessageForced(hint);
         }
 
