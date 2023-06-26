@@ -144,7 +144,9 @@ namespace MissionSharedLibrary.Utilities
         {
         }
 
-        public static void SetAgentFormation(Agent agent, Formation formation)
+        private static MethodInfo _formationCopyOrdersFrom;
+        private static FieldInfo _formationOrderPosition;
+        public static void SetAgentFormation(Agent agent, Formation targetFormation)
         {
             // If formation is null, prevent agent be added to detachments during DetachmentManager.TickDetachments
             // Or if agent with no formation is added to a detachment, and later is added to a formation, it will be detached and attached at the same time.
@@ -157,11 +159,35 @@ namespace MissionSharedLibrary.Utilities
             // agent.Formation = (Formation)null;
             //
             // end code.
-            if (formation == null && agent.Formation != null && IsTeamValid(agent.Team))
+            if (targetFormation == null && agent.Formation != null && IsTeamValid(agent.Team))
             {
                 agent.Team.DetachmentManager?.OnAgentRemoved(agent);
             }
-            agent.Formation = formation;
+            // [Update Log]
+            // notify the game system about formation change to create new formation orders if needed.
+            var oldFormation = agent.Formation;
+            agent.Formation = targetFormation;
+            oldFormation.TransferUnits(targetFormation, 0);
+            if (targetFormation.CountOfUnits == 0)
+            {
+                if (_formationCopyOrdersFrom == null)
+                {
+                    _formationCopyOrdersFrom = typeof(Formation).GetMethod("CopyOrdersFrom", BindingFlags.Instance | BindingFlags.NonPublic);
+                }
+                if (_formationOrderPosition == null)
+                {
+                    _formationOrderPosition = typeof(Formation).GetField("_orderPosition", BindingFlags.Instance | BindingFlags.NonPublic);
+                }
+                _formationCopyOrdersFrom.Invoke(targetFormation, new[] { oldFormation });
+                targetFormation.SetPositioning(new WorldPosition?((WorldPosition)_formationOrderPosition.GetValue(oldFormation)), new Vec2?(oldFormation.Direction), new int?(oldFormation.UnitSpacing));
+            }
+            agent.Team.TriggerOnFormationsChanged(oldFormation);
+            agent.Team.TriggerOnFormationsChanged(targetFormation);
+            oldFormation.QuerySystem.Expire();
+            targetFormation.QuerySystem.Expire();
+            oldFormation.Team.QuerySystem.ExpireAfterUnitAddRemove();
+            targetFormation.Team.QuerySystem.ExpireAfterUnitAddRemove();
+            // TODO: find a way to update the UI (probably: MissionOrderTroopControllerVM.UpdateTroops())
         }
 
         public static void SetPlayerFormationClass(FormationClass formationClass)
@@ -333,7 +359,9 @@ namespace MissionSharedLibrary.Utilities
                         mission.MainAgent.RemoveComponent(mission.MainAgent.HumanAIComponent);
                     }
 
-                    mission.MainAgent.Formation = mission.MainAgent.Team.GetFormation(mission.MainAgent.Character.GetFormationClass());
+                    // [Update Log]
+                    // - do not update formation automatically because it'll reverse player's setting
+                    //SetAgentFormation(mission.MainAgent, mission.MainAgent.Team.GetFormation(mission.MainAgent.Character.GetFormationClass()));
                     mission.MainAgent.Controller = Agent.ControllerType.AI;
                     // Note that the formation may be already set by SwitchFreeCameraLogic
                     if (mission.MainAgent.Formation == null)
@@ -538,7 +566,7 @@ namespace MissionSharedLibrary.Utilities
                 var vec2_6 = agentToFollow.MountAgent.GetMovementDirection() * agentToFollow.MountAgent.Monster.RiderBodyCapsuleForwardAdder;
                 cameraTarget += vec2_6.ToVec3();
             }
-            
+
             cameraTarget.z += (float)CameraTargetAddedHeight.GetValue(missionScreen);
             cameraTarget += matrixFrame.rotation.f * agentScale * (0.7f * MathF.Pow(MathF.Cos((float)(1.0 / ((missionScreen.CameraResultDistanceToTarget / (double)agentScale - 0.20000000298023224) * 30.0 + 20.0))), 3500f));
             result.origin = cameraTarget + matrixFrame.rotation.u * missionScreen.CameraResultDistanceToTarget;
